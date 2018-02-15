@@ -55,7 +55,8 @@ conf.subfolder = conf.subfolder.replace(/^\/|\/$/g, '') + '/';
 const ssl = !!(conf.key && conf.cert);
 
 const stats = (req, res) => {
-    req.url = (req.url.endsWith(conf.subfolder)) ? conf.subfolder + 'index.html' : req.url;
+    req.url = (req.url.endsWith(conf.subfolder)) ? '/' + conf.subfolder + 'index.html' : req.url;
+    req.url = req.url.replace(/\/{2,}/g);
     console.log(req.url);
 
     fs.readFile(__dirname + '/web' + req.url, (err, buf) => {
